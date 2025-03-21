@@ -11,7 +11,7 @@ function getRSAKey(): Buffer {
 
 function getDecryptedKey(passphrase: string): string {
     const keyPath = path.join(process.cwd(), 'rsa_key.p8');
-    
+
     try {
         return execSync(`openssl pkcs8 -in ${keyPath} -passin pass:${passphrase} -nocrypt`, { encoding: 'utf8' });
     } catch (error) {
@@ -34,7 +34,7 @@ export async function GET() {
         } else {
             rsaKey = getRSAKey();
         }
-        
+
         const privateKey = createPrivateKey(rsaKey);
         const publicKey = createPublicKey(privateKey);
         const publicKeyRaw = publicKey.export({ type: 'spki', format: 'der' });
@@ -42,8 +42,8 @@ export async function GET() {
         const sha256Hash = createHash('sha256').update(publicKeyRaw).digest('base64');
         const publicKeyFp = 'SHA256:' + sha256Hash;
 
-        const account = process.env.SNOWFLAKE_ACCOUNT ?? '';
-        const user = process.env.SNOWFLAKE_USER ?? '';
+        const account = process.env.SNOWFLAKE_ACCOUNT?.toUpperCase() ?? '';
+        const user = process.env.SNOWFLAKE_USER?.toUpperCase() ?? '';
         const qualifiedUsername = `${account}.${user}`;
 
         const nowInSeconds = Math.floor(Date.now() / 1000);
