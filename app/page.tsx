@@ -1,6 +1,6 @@
 "use client"
 
-import { AgentApiState, AgentRequestBuildParams, CORTEX_ANALYST_TOOL, CORTEX_SEARCH_TOOL, DATA_2_ANALYTICS_TOOL, useAgentAPIQuery } from "@/lib/agent-api";
+import { AgentApiState, AgentRequestBuildParams, CORTEX_ANALYST_TOOL, CORTEX_SEARCH_TOOL, DATA_TO_CHART_TOOL, SQL_EXEC_TOOL, useAgentAPIQuery } from "@/lib/agent-api";
 import { useAccessToken } from "@/lib/auth";
 import { Messages } from "./components/messages";
 import { ChatInput } from "./components/input";
@@ -14,10 +14,11 @@ export default function Home() {
   const tools: AgentRequestBuildParams['tools'] = [
     CORTEX_SEARCH_TOOL,
     CORTEX_ANALYST_TOOL,
+    SQL_EXEC_TOOL,
   ]
 
-  if (process.env.NEXT_PUBLIC_DATA_2_ANSWER_ENABLED === "true") {
-    tools.push(DATA_2_ANALYTICS_TOOL)
+  if (process.env.NEXT_PUBLIC_DATA_TO_CHART_ENABLED === "true") {
+    tools.push(DATA_TO_CHART_TOOL)
   }
 
   const { agentState, messages, latestMessageId, handleNewMessage } = useAgentAPIQuery({
@@ -29,7 +30,8 @@ export default function Home() {
     tools,
     toolResources: {
       "analyst1": { "semantic_model_file": process.env.NEXT_PUBLIC_SEMANTIC_MODEL_PATH },
-      "search1": { "name": process.env.NEXT_PUBLIC_SEARCH_SERVICE_PATH, max_results: 10 }
+      "search1": { "name": process.env.NEXT_PUBLIC_SEARCH_SERVICE_PATH, max_results: 10 },
+      "sql_exec": { "warehouse": process.env.NEXT_PUBLIC_SNOWFLAKE_WAREHOUSE ?? "" },
     }
   })
 

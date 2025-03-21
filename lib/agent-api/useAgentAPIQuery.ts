@@ -119,6 +119,7 @@ export function useAgentAPIQuery(params: AgentApiQueryParams) {
                             method: 'POST',
                             body: JSON.stringify({
                                 statement,
+                                warehouse: process.env.NEXT_PUBLIC_SNOWFLAKE_WAREHOUSE ?? "",
                             }),
                             headers: {
                                 "Content-Type": "application/json",
@@ -139,57 +140,55 @@ export function useAgentAPIQuery(params: AgentApiQueryParams) {
                         appendTableToAssistantMessage(newAssistantMessage, tableData);
                         setMessages(appendAssistantMessageToMessagesList(newAssistantMessage));
 
-                        // if data2answer is enabled, run data2answer tool
-                        if (process.env.NEXT_PUBLIC_DATA_2_ANSWER_ENABLED === "true") {
-                            setAgentState(AgentApiState.RUNNING_ANALYTICS);
-                            const analystTextResponse = toolResultsResponse.tool_results.content[0]?.json?.text;
-                            const queryId = tableData.statementHandle;
-                            const { headers, body } = buildStandardRequestParams({
-                                authToken,
-                                messages: getStandardData2AnalyticsPayload(toolResources, input, statement, analystTextResponse, queryId) as AgentMessage[],
-                                ...agentRequestParams,
-                            });
+                        // run data2answer
+                        setAgentState(AgentApiState.RUNNING_ANALYTICS);
+                        const analystTextResponse = toolResultsResponse.tool_results.content[0]?.json?.text;
+                        const queryId = tableData.statementHandle;
+                        const { headers, body } = buildStandardRequestParams({
+                            authToken,
+                            messages: getStandardData2AnalyticsPayload(toolResources, input, statement, analystTextResponse, queryId) as AgentMessage[],
+                            ...agentRequestParams,
+                        });
 
-                            const data2AnalyticsResponse = await fetch(`${snowflakeUrl}/api/v2/cortex/agent:run`, {
-                                method: 'POST',
-                                headers,
-                                body: JSON.stringify(body),
-                            })
+                        const data2AnalyticsResponse = await fetch(`${snowflakeUrl}/api/v2/cortex/agent:run`, {
+                            method: 'POST',
+                            headers,
+                            body: JSON.stringify(body),
+                        })
 
-                            const data2AnalyticsStreamEvents = events(data2AnalyticsResponse);
+                        const data2AnalyticsStreamEvents = events(data2AnalyticsResponse);
 
-                            for await (const event of data2AnalyticsStreamEvents) {
-                                if (event.data === "[DONE]") {
-                                    setAgentState(AgentApiState.IDLE);
-                                    return;
-                                }
-
-                                if (JSON.parse(event.data!).code) {
-                                    toast.error(JSON.parse(event.data!).message);
-                                    setAgentState(AgentApiState.IDLE);
-                                    return;
-                                }
-
-                                const {
-                                    delta: {
-                                        content: data2Contents
-                                    }
-                                } = JSON.parse(event.data!);
-
-                                data2Contents.forEach((content: AgentMessage['content'][number]) => {
-                                    if ('text' in content) {
-                                        appendTextToAssistantMessage(newAssistantMessage, content.text);
-                                        setMessages(appendAssistantMessageToMessagesList(newAssistantMessage));
-                                    } else {
-                                        const tool_results = (content as AgentMessageToolResultsContent).tool_results;
-
-                                        if (tool_results) {
-                                            appendToolResponseToAssistantMessage(newAssistantMessage, content);
-                                            setMessages(appendAssistantMessageToMessagesList(newAssistantMessage));
-                                        }
-                                    }
-                                })
+                        for await (const event of data2AnalyticsStreamEvents) {
+                            if (event.data === "[DONE]") {
+                                setAgentState(AgentApiState.IDLE);
+                                return;
                             }
+
+                            if (JSON.parse(event.data!).code) {
+                                toast.error(JSON.parse(event.data!).message);
+                                setAgentState(AgentApiState.IDLE);
+                                return;
+                            }
+
+                            const {
+                                delta: {
+                                    content: data2Contents
+                                }
+                            } = JSON.parse(event.data!);
+
+                            data2Contents.forEach((content: AgentMessage['content'][number]) => {
+                                if ('text' in content) {
+                                    appendTextToAssistantMessage(newAssistantMessage, content.text);
+                                    setMessages(appendAssistantMessageToMessagesList(newAssistantMessage));
+                                } else {
+                                    const tool_results = (content as AgentMessageToolResultsContent).tool_results;
+
+                                    if (tool_results) {
+                                        appendToolResponseToAssistantMessage(newAssistantMessage, content);
+                                        setMessages(appendAssistantMessageToMessagesList(newAssistantMessage));
+                                    }
+                                }
+                            })
                         }
                     }
                 }
