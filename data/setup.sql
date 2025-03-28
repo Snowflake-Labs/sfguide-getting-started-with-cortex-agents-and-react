@@ -15,6 +15,12 @@ CREATE OR REPLACE WAREHOUSE InsuranceWarehouse
 
 -- Set the warehouse for use
 USE WAREHOUSE InsuranceWarehouse;
+-- Set the warehouse as default for the current user, if there is no default warehouse currently set
+SET CUR_USER = (SELECT CURRENT_USER());
+DESC USER IDENTIFIER($CUR_USER);
+SET DEF_WAREHOUSE = (SELECT "value" FROM TABLE(RESULT_SCAN(LAST_QUERY_ID())) WHERE "property" = 'DEFAULT_WAREHOUSE');
+SET WAREHOUSE_TO_SET = IFF(EQUAL_NULL($DEF_WAREHOUSE, 'null'), 'INSURANCEWAREHOUSE', $DEF_WAREHOUSE);
+ALTER USER IDENTIFIER($CUR_USER) SET DEFAULT_WAREHOUSE = $WAREHOUSE_TO_SET;
     
 -- Create or replace the Customers table
 CREATE OR REPLACE TABLE InsuranceDB.data.Customers (

@@ -90,7 +90,7 @@ const PurePreviewMessage = ({
             // if execute sql response
         } else if (content.type === "sql_table") {
             const { text: tableMarkdown } = (content as AgentMessageTextContent);
-            agentResponses.push(<ChatTableComponent key={tableMarkdown} tableMarkdown={tableMarkdown} open={process.env.NEXT_PUBLIC_DATA_2_ANSWER_ENABLED !== "true"} />);
+            agentResponses.push(<ChatTableComponent key={tableMarkdown} tableMarkdown={tableMarkdown} open={false} />);
         }
     })
 
